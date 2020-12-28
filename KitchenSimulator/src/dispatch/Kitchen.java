@@ -3,15 +3,16 @@ package dispatch;
 import java.util.*;
 
 /**
- * @author iswar patel
- * real-time system that simulates the fulfillment of delivery orders for a kitchen
+ * @author iswar patel real-time system that simulates the fulfillment of
+ *         delivery orders for a kitchen
  *
  */
 public class Kitchen {
-	
+
 	enum DispatchType {
 		Matched, FIFO
 	}
+
 	static DispatchType dispatchType;
 	// List to track simulation events during simulation
 	private static List<LogEvent> events;
@@ -22,20 +23,27 @@ public class Kitchen {
 	}
 
 	static Chef chef;
-	static DispatchManager dispatchManager;
 
 	// an instanceLock object for synchronizing on counters on wait time and orders
 	private static final Object counterLock = new Object();
-	
+
 	/**
 	 * total number of received orders
 	 */
 	private static int receivedOrders;
+	/**
+	 * total number of dispatched orders
+	 */
 	private static int dispatchedOrders;
+	/**
+	 * counter for total courier wait time wait time = arrival time - delivery time
+	 */
 	private static long courierWaitTime;
-	private static long foodWaitTime;
-	
-	
+	/**
+	 * counter for total order wait time wait time = delivery time - prep time
+	 */
+	private static long orderWaitTime;
+
 	/**
 	 * Increment the number of dispatched orders
 	 */
@@ -47,6 +55,7 @@ public class Kitchen {
 
 	/**
 	 * Increment the number of received orders
+	 * 
 	 * @param count number of orders
 	 */
 	static void setReceivedOrders(int count) {
@@ -54,8 +63,10 @@ public class Kitchen {
 			receivedOrders = count;
 		}
 	}
-	
+
 	/**
+	 * Get total received orders
+	 * 
 	 * @return number of received orders
 	 */
 	static int getReceivedOrders() {
@@ -66,16 +77,18 @@ public class Kitchen {
 
 	/**
 	 * Get the number of dispatched orders
+	 * 
 	 * @return number of dispatched orders
 	 */
 	static int getDispatchedOrders() {
 		synchronized (counterLock) {
 			return dispatchedOrders;
 		}
-	}	
-	
+	}
+
 	/**
 	 * Update the courier wait time
+	 * 
 	 * @param count the amount to increase
 	 */
 	static void updateCourierWaitTime(long count) {
@@ -84,34 +97,59 @@ public class Kitchen {
 		}
 	}
 
-	static long getFoodWaitTime() {
+	/**
+	 * Get order wait time
+	 * 
+	 * @return total order wait time
+	 */
+	static long getOrderWaitTime() {
+		synchronized (counterLock) {
+			return orderWaitTime;
+		}
+	}
+
+	/**
+	 * update order wait time when an order is delivered
+	 * 
+	 * @param count the wait time of current order
+	 */
+	static void updateOrderWaitTime(long count) {
+		synchronized (counterLock) {
+			orderWaitTime += count;
+		}
+	}
+
+	/**
+	 * Get courier wait time
+	 * 
+	 * @return total courier wait time
+	 */
+	static long getCourierWaitTime() {
 		synchronized (counterLock) {
 			return courierWaitTime;
 		}
 	}
-	
-	static void updateFoodWaitTime(long count) {
-		synchronized (counterLock) {
-			foodWaitTime += count;
-		}
-	}
-
-	static long getCourierWaitTime() {
-		synchronized (counterLock) {
-			return foodWaitTime;
-		}
-	}
 
 	// List of incoming unprepared orders
-	private static LinkedList<Food> orderList = new LinkedList<Food>();
+	private static LinkedList<Order> orderList = new LinkedList<Order>();
 
-	static void placeOrder(String orderNum, Food order) {
+	/**
+	 * Add order to queue to process
+	 * 
+	 * @param order the order object
+	 */
+	static void placeOrder(Order order) {
 		synchronized (orderList) {
 			orderList.add(order);
 		}
 	}
 
-	static Food orderAvailable() {
+	/**
+	 * Return FIFO order to be processed
+	 * 
+	 * @return order
+	 */
+	static Order orderAvailable() {
 		synchronized (orderList) {
 			if (!orderList.isEmpty()) {
 				return orderList.pop();
@@ -123,121 +161,61 @@ public class Kitchen {
 
 	// List prepared orders ready to be dispatched
 	private static final Object dispatchLock = new Object();
-	private static Map<String, Food> ordersCooked = new HashMap<String, Food>();
-	private static Queue<Food> cookedList = new LinkedList<>();
+	private static Map<String, Order> ordersCooked = new HashMap<String, Order>();
+	private static Queue<Order> cookedList = new LinkedList<>();
 
-	static void updateCookedOrder(Food foodCooked) {
+	/**
+	 * Update an order which has finished cooking
+	 * 
+	 * @param orderCooked order that has finished cooking
+	 */
+	static void updateCookedOrder(Order orderCooked) {
 		synchronized (dispatchLock) {
-			ordersCooked.put(foodCooked.id, foodCooked);
-			cookedList.add(foodCooked);
-			logEvent(LogEvent.cookFinishedFood(foodCooked.id));
+			ordersCooked.put(orderCooked.id, orderCooked);
+			cookedList.add(orderCooked);
+			logEvent(LogEvent.cookFinishedOrder(orderCooked.id));
 		}
 	}
 
-	static boolean checkCookingStatus(String orderNum, Food food) {
+	/**
+	 * Gets an order from the cooked queue
+	 * 
+	 * @param orderNum the order to be retrieved
+	 * @return the order if present, null otherwise
+	 */
+	static Order getCookedOrder(String orderNum) {
 		synchronized (dispatchLock) {
 			if (ordersCooked.containsKey(orderNum)) {
-				return true;
+				Order order = ordersCooked.remove(orderNum);
+				cookedList.remove(order);
+				return order;
 			} else {
-				return false;
+				return null;
 			}
 		}
-
 	}
 
-	static void removeCompletedOrder(String orderNum) {
-		synchronized (dispatchLock) {
-			Food food = ordersCooked.remove(orderNum);
-			cookedList.remove(food);
-		}
-	}
-
-	static Food getFirstCompletedOrder() {
+	/**
+	 * Get an order in FIFO format
+	 * 
+	 * @return the first order in queue
+	 */
+	static Order getFirstCompletedOrder() {
 		synchronized (dispatchLock) {
 			if (!cookedList.isEmpty()) {
-				Food food = cookedList.remove();
-				ordersCooked.remove(food.id);
-				return food;
-			}
-			return null;
-		}
-	}
-	
-	static Queue<Food> getAllCompletedOrders() {
-		synchronized (dispatchLock) {
-			return cookedList;
-		}
-	}
-
-	// List of couriers ready to deliver orders
-	private static Map<String, Courier> couriers = new HashMap<String, Courier>();
-	private static Queue<Courier> courierList = new LinkedList<>();
-
-	static void addCourier(Courier courier, String id) {
-		synchronized (dispatchLock) {
-			courierList.add(courier);
-			couriers.put(id, courier);
-		}
-	}
-
-	static Courier getFirstCourier() {
-		synchronized (dispatchLock) {
-			if (!courierList.isEmpty()) {
-				Courier courier = courierList.poll();
-				couriers.remove(courier.food.id);
-				return courier;
-			}
-			return null;
-		}
-	}
-	
-	static Courier getCourier(String id) {
-		synchronized (dispatchLock) {
-			if (couriers.containsKey(id)) {
-				Courier courier = couriers.get(id);
-				couriers.remove(id);
-				courierList.remove(courier);
-				return courier;
+				Order order = cookedList.remove();
+				ordersCooked.remove(order.id);
+				return order;
 			}
 			return null;
 		}
 	}
 
-	public static void runMatchedSimulation() throws InterruptedException {
-		
-		System.out.println("Starting Matched simulation");
+	public static void runSimulation(DispatchType type) throws InterruptedException {
 
 		events = Collections.synchronizedList(new ArrayList<LogEvent>());
 		chef = new Chef();
-		dispatchType = DispatchType.Matched;
-		dispatchManager = new DispatchManager();
-		
-		// Start cooking
-		Thread cook = new Thread(new OrderManager());
-		cook.start();
-
-		// Start receiving orders.
-		Thread customer = new Thread(new Customer());
-		customer.start();
-		
-		// wait for all orders to finish
-		while(getDispatchedOrders() == 0 || getDispatchedOrders() != getReceivedOrders()) {
-			Thread.sleep(10000);
-		}
-		
-		// Finish
-		cook.interrupt();
-		customer.interrupt();
-	}
-	
-	public static void runFIFOSimulation() throws InterruptedException {
-
-		System.out.println("Starting FIFO simulation");
-		
-		events = Collections.synchronizedList(new ArrayList<LogEvent>());
-		chef = new Chef();
-		dispatchType = DispatchType.FIFO;
-		dispatchManager = new DispatchManager();
+		dispatchType = type;
 
 		// Start cooking
 		Thread cook = new Thread(new OrderManager());
@@ -247,49 +225,37 @@ public class Kitchen {
 		Thread customer = new Thread(new Customer());
 		customer.start();
 
-		//Start dispatching orders.
-		Thread dispatch = new Thread(new FIFODispatcher());
-		dispatch.start();
-		
 		// wait for all orders to finish
-		while(getDispatchedOrders() == 0 || getDispatchedOrders() != getReceivedOrders()) {
+		while (getDispatchedOrders() == 0 || getDispatchedOrders() != getReceivedOrders()) {
 			Thread.sleep(10000);
 		}
-		
+
 		// Finish
 		cook.interrupt();
 		customer.interrupt();
-		dispatch.interrupt();
+
+		Kitchen.logEvent(LogEvent.logAverageCourierWaitTime(getCourierWaitTime() / getDispatchedOrders()));
+		Kitchen.logEvent(LogEvent.logAverageOrderWaitTime(getOrderWaitTime() / getDispatchedOrders()));
 	}
 
 	/**
 	 * Entry point for the simulation.
 	 */
 	public static void main(String args[]) throws InterruptedException {
-		
+
 		Scanner input = new Scanner(System.in);
 		System.out.println("Please type matched or fifo");
 		String type = input.nextLine();
 		input.close();
-		
-		if(type.equals("fifo")) {
-			runFIFOSimulation();
-		}
-		else if(type.equals("matched")) {
-			runMatchedSimulation();
-		}
-		else {
+
+		if (type.equals("fifo")) {
+			runSimulation(DispatchType.FIFO);
+		} else if (type.equals("matched")) {
+			runSimulation(DispatchType.Matched);
+		} else {
 			System.out.println("Invalid input");
 			System.exit(0);
 		}
-
-		// wait for all orders to finish
-		while(getDispatchedOrders() == 0 || getDispatchedOrders() != getReceivedOrders()) {
-			Thread.sleep(10000);
-		}
-		
-		System.out.println("Average Courier Wait Time : " + getCourierWaitTime()/getDispatchedOrders() + " ms");
-		System.out.println("Average Food Wait Time : " + getFoodWaitTime()/getDispatchedOrders() + " ms");
 	}
 
 }

@@ -10,7 +10,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 /**
- * The customer places order.
+ * The customer places order. It reads all orders from the input file
+ * and puts them in a queue for processing
  */
 public class Customer implements Runnable {
 	public void run() {
@@ -23,10 +24,10 @@ public class Customer implements Runnable {
 
 			for (int i = 0; i < orderList.size(); i++) {
 				JSONObject order = (JSONObject) orderList.get(i);
-				Food food = parseOrdereObject(order);
+				Order food = parseOrdereObject(order);
 				// Customer orders
 				Kitchen.logEvent(LogEvent.customerPlacedOrder(food.id));
-				Kitchen.placeOrder(food.id, food);
+				Kitchen.placeOrder(food);
 				// Limit orders to 2 per second
 				if (i % 2 == 1) {
 					Thread.sleep(1000);
@@ -39,10 +40,10 @@ public class Customer implements Runnable {
 
 	}
 
-	private static Food parseOrdereObject(JSONObject order) {
+	private static Order parseOrdereObject(JSONObject order) {
 		String name = (String) order.get("name");
 		String id = (String) order.get("id");
 		long time = (Long) order.get("prepTime");
-		return new Food(id, name, time);
+		return new Order(id, name, time);
 	}
 }

@@ -7,7 +7,8 @@ import java.util.Date;
  */
 public class LogEvent {
 	public enum EventType {
-		OrderReceived, OrderPrepared, OrderDispatched, CourierDispatched, CourierArrived
+		OrderReceived, OrderPrepared, OrderDispatched, CourierDispatched, CourierArrived, AverageCourierWaitTime,
+		AverageOrderWaitTime
 	};
 
 	public final EventType event;
@@ -16,20 +17,20 @@ public class LogEvent {
 
 	private final String courierNumber;
 
-	private final Long foodWaitTime;
+	private final Long orderWaitTime;
 
 	private final Long courierWaitTime;
 
-	private LogEvent(EventType event, String orderNumber, String courierNumber, Long foodWaitTime,
+	private LogEvent(EventType event, String orderNumber, String courierNumber, Long orderWaitTime,
 			Long courierWaitTime) {
 		this.event = event;
 		this.orderNumber = orderNumber;
 		this.courierNumber = courierNumber;
-		this.foodWaitTime = foodWaitTime;
+		this.orderWaitTime = orderWaitTime;
 		this.courierWaitTime = courierWaitTime;
 	}
 
-	public static LogEvent cookFinishedFood(String orderNumber) {
+	public static LogEvent cookFinishedOrder(String orderNumber) {
 		return new LogEvent(EventType.OrderPrepared, orderNumber, null, null, null);
 	}
 
@@ -37,17 +38,25 @@ public class LogEvent {
 		return new LogEvent(EventType.OrderReceived, orderNumber, null, null, null);
 	}
 
-	public static LogEvent orderDispatched(String orderNumber, String courierId, Long foodWaitTime,
+	public static LogEvent orderDispatched(String orderNumber, String courierId, Long orderWaitTime,
 			Long courierWaitTime) {
-		return new LogEvent(EventType.OrderDispatched, orderNumber, courierId, foodWaitTime, courierWaitTime);
+		return new LogEvent(EventType.OrderDispatched, orderNumber, courierId, orderWaitTime, courierWaitTime);
 	}
-	
+
 	public static LogEvent courierDispatched(String orderNumber) {
 		return new LogEvent(EventType.CourierDispatched, orderNumber, null, null, null);
 	}
-	
+
 	public static LogEvent courierArrived(String orderNumber) {
 		return new LogEvent(EventType.CourierArrived, orderNumber, null, null, null);
+	}
+
+	public static LogEvent logAverageCourierWaitTime(long courierWaitTime) {
+		return new LogEvent(EventType.AverageCourierWaitTime, null, null, null, courierWaitTime);
+	}
+
+	public static LogEvent logAverageOrderWaitTime(long orderWaitTime) {
+		return new LogEvent(EventType.AverageOrderWaitTime, null, null, orderWaitTime, null);
 	}
 
 	public String toString() {
@@ -61,7 +70,7 @@ public class LogEvent {
 
 		case OrderDispatched:
 			return "\n Order " + orderNumber + " dispatched by courier " + courierNumber + " at "
-					+ new Date().toString() + "\n Food wait time " + foodWaitTime + " ms. Courier wait time "
+					+ new Date().toString() + "\n Order wait time " + orderWaitTime + " ms. Courier wait time "
 					+ courierWaitTime + " ms\n";
 
 		case CourierDispatched:
@@ -69,6 +78,12 @@ public class LogEvent {
 
 		case CourierArrived:
 			return " Courier " + " arrived for order " + orderNumber + " at " + new Date().toString();
+
+		case AverageCourierWaitTime:
+			return " Average Courier Wait Time " + courierWaitTime + " ms";
+
+		case AverageOrderWaitTime:
+			return " Average Order Wait Time " + orderWaitTime + " ms";
 
 		default:
 			throw new Error("Invalid event");
