@@ -2,29 +2,29 @@ package dispatch;
 
 /**
  * A Chef is used to cook Food order.
- * cooking food is simulated by THREAD.SLEEP
+ * cooking order is simulated by THREAD.SLEEP
  */
 
 public class Chef {
 
-	synchronized boolean makeFood(Order food) throws InterruptedException {
-        Thread cookThread = new Thread(new CookAnItem(food));
+	synchronized boolean makeFood(Order order) throws InterruptedException {
+        Thread cookThread = new Thread(new CookAnItem(order));
         cookThread.start();
         return true;
 	}
 
 	private class CookAnItem implements Runnable {
-	    private final Order food;
+	    private final Order order;
 
-	    CookAnItem(Order food) {
-	        this.food = food;
+	    CookAnItem(Order order) {
+	        this.order = order;
         }
 
 		public void run() {
 			try {
-                Thread.sleep(food.cookTimeS * 1000);
-                food.prepTime = System.currentTimeMillis();
-                Kitchen.updateCookedOrder(food);
+                Thread.sleep(order.cookTimeS * 1000);
+                order.prepTime = System.currentTimeMillis();
+                Kitchen.dispatchManager.dispatch(order);
 
 			} catch(InterruptedException e) {
                 System.out.println("Cooking thread interrupted.");

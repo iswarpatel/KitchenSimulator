@@ -23,6 +23,7 @@ public class Kitchen {
 	}
 
 	static Chef chef;
+	static DispatchManager dispatchManager;
 
 	// an instanceLock object for synchronizing on counters on wait time and orders
 	private static final Object counterLock = new Object();
@@ -173,7 +174,7 @@ public class Kitchen {
 		synchronized (dispatchLock) {
 			ordersCooked.put(orderCooked.id, orderCooked);
 			cookedList.add(orderCooked);
-			logEvent(LogEvent.cookFinishedOrder(orderCooked.id));
+			logEvent(LogEvent.cookFinishedOrder(orderCooked.id, System.currentTimeMillis()));
 		}
 	}
 
@@ -211,11 +212,46 @@ public class Kitchen {
 		}
 	}
 
-	public static void runSimulation(DispatchType type) throws InterruptedException {
+	// List of couriers ready to deliver orders
+	private static Map<String, Courier> couriers = new HashMap<String, Courier>();
+	private static Queue<Courier> courierList = new LinkedList<>();
+
+	static void addCourier(Courier courier, String id) {
+		synchronized (dispatchLock) {
+			courierList.add(courier);
+			couriers.put(id, courier);
+		}
+	}
+
+	static Courier getFirstCourier() {
+		synchronized (dispatchLock) {
+			if (!courierList.isEmpty()) {
+				Courier courier = courierList.poll();
+				couriers.remove(courier.order.id);
+				return courier;
+			}
+			return null;
+		}
+	}
+
+	static Courier getCourier(String id) {
+		synchronized (dispatchLock) {
+			if (couriers.containsKey(id)) {
+				Courier courier = couriers.get(id);
+				couriers.remove(id);
+				courierList.remove(courier);
+				return courier;
+			}
+			return null;
+		}
+	}
+
+	public static List<LogEvent> runSimulation(DispatchType type) throws InterruptedException {
 
 		events = Collections.synchronizedList(new ArrayList<LogEvent>());
 		chef = new Chef();
 		dispatchType = type;
+		dispatchManager = new DispatchManager();
 
 		// Start cooking
 		Thread cook = new Thread(new OrderManager());
@@ -225,6 +261,12 @@ public class Kitchen {
 		Thread customer = new Thread(new Customer());
 		customer.start();
 
+		Thread dispatch = new Thread(new FIFODispatcher());
+		// Start dispatching orders.
+		if (type == DispatchType.FIFO) {
+			dispatch.start();
+		}
+
 		// wait for all orders to finish
 		while (getDispatchedOrders() == 0 || getDispatchedOrders() != getReceivedOrders()) {
 			Thread.sleep(10000);
@@ -233,9 +275,14 @@ public class Kitchen {
 		// Finish
 		cook.interrupt();
 		customer.interrupt();
+		if (type == DispatchType.FIFO) {
+			dispatch.interrupt();
+		}
 
 		Kitchen.logEvent(LogEvent.logAverageCourierWaitTime(getCourierWaitTime() / getDispatchedOrders()));
 		Kitchen.logEvent(LogEvent.logAverageOrderWaitTime(getOrderWaitTime() / getDispatchedOrders()));
+		
+		return events;
 	}
 
 	/**
@@ -249,9 +296,9 @@ public class Kitchen {
 		input.close();
 
 		if (type.equals("fifo")) {
-			runSimulation(DispatchType.FIFO);
+			System.out.println("\n Validation: " + Validate.validateSimulation(runSimulation(DispatchType.FIFO)));
 		} else if (type.equals("matched")) {
-			runSimulation(DispatchType.Matched);
+			System.out.println("\n Validation: " + Validate.validateSimulation(runSimulation(DispatchType.Matched)));
 		} else {
 			System.out.println("Invalid input");
 			System.exit(0);
