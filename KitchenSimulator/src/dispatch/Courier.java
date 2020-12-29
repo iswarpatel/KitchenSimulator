@@ -18,10 +18,10 @@ public class Courier implements Runnable {
 
 	public void run() {
 		try {
-			Kitchen.logEvent(LogEvent.courierDispatched(order.id));
+			Kitchen.logEvent(LogEvent.courierDispatched(order.id, System.currentTimeMillis()));
 			// Randomly wait for 3 to 15 seconds
 			Thread.sleep((new Random().nextInt(13) + 3) * 1000);
-			Kitchen.logEvent(LogEvent.courierArrived(order.id));
+			Kitchen.logEvent(LogEvent.courierArrived(order.id, System.currentTimeMillis()));
 			arrivalTime = System.currentTimeMillis();
 			while (!Thread.interrupted()) {
 				Order completedOrder;
@@ -37,7 +37,7 @@ public class Courier implements Runnable {
 					Kitchen.updateDispatchedOrders();
 					Kitchen.updateOrderWaitTime(orderWaitTime);
 					Kitchen.updateCourierWaitTime(courierWaitTime);
-					Kitchen.logEvent(LogEvent.orderDispatched(completedOrder.id, order.id, orderWaitTime, courierWaitTime));
+					Kitchen.logEvent(LogEvent.orderDispatched(completedOrder.id, order.id, orderWaitTime, courierWaitTime, epoch));
 					break;
 				}
 			}

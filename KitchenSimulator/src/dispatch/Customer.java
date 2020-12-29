@@ -26,7 +26,7 @@ public class Customer implements Runnable {
 				JSONObject order = (JSONObject) orderList.get(i);
 				Order food = parseOrdereObject(order);
 				// Customer orders
-				Kitchen.logEvent(LogEvent.customerPlacedOrder(food.id));
+				Kitchen.logEvent(LogEvent.customerPlacedOrder(food.id, System.currentTimeMillis()));
 				Kitchen.placeOrder(food);
 				// Limit orders to 2 per second
 				if (i % 2 == 1) {

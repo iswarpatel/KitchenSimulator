@@ -173,7 +173,7 @@ public class Kitchen {
 		synchronized (dispatchLock) {
 			ordersCooked.put(orderCooked.id, orderCooked);
 			cookedList.add(orderCooked);
-			logEvent(LogEvent.cookFinishedOrder(orderCooked.id));
+			logEvent(LogEvent.cookFinishedOrder(orderCooked.id, System.currentTimeMillis()));
 		}
 	}
 
@@ -211,7 +211,7 @@ public class Kitchen {
 		}
 	}
 
-	public static void runSimulation(DispatchType type) throws InterruptedException {
+	public static List<LogEvent> runSimulation(DispatchType type) throws InterruptedException {
 
 		events = Collections.synchronizedList(new ArrayList<LogEvent>());
 		chef = new Chef();
@@ -236,6 +236,8 @@ public class Kitchen {
 
 		Kitchen.logEvent(LogEvent.logAverageCourierWaitTime(getCourierWaitTime() / getDispatchedOrders()));
 		Kitchen.logEvent(LogEvent.logAverageOrderWaitTime(getOrderWaitTime() / getDispatchedOrders()));
+
+		return events;
 	}
 
 	/**
@@ -249,9 +251,9 @@ public class Kitchen {
 		input.close();
 
 		if (type.equals("fifo")) {
-			runSimulation(DispatchType.FIFO);
+			System.out.println("\n Validation: " + Validate.validateSimulation(runSimulation(DispatchType.FIFO)));
 		} else if (type.equals("matched")) {
-			runSimulation(DispatchType.Matched);
+			System.out.println("\n Validation: " + Validate.validateSimulation(runSimulation(DispatchType.Matched)));
 		} else {
 			System.out.println("Invalid input");
 			System.exit(0);
