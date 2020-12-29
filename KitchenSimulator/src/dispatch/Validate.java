@@ -10,7 +10,7 @@ public class Validate {
 		public InvalidSimulationException() {
 		}
 	}
-	
+
 	static class ValueComparator implements Comparator<Map.Entry<String, Long>> {
 		public int compare(Map.Entry<String, Long> o1, Map.Entry<String, Long> o2) {
 			return (o1.getValue()).compareTo(o2.getValue());
@@ -99,32 +99,26 @@ public class Validate {
 				check(courierArrived.get(courier) <= orderDispatchedByCourier.get(courier),
 						"Courier " + courier + " arrival time is not earlier than order dispatch time");
 			}
-			
-			// For FIFO, first prder prepared = first order dispatched
-			/* if (Kitchen.dispatchType == DispatchType.FIFO) {
-				List<Map.Entry<String, Long>> orderPreparedList = new ArrayList<Map.Entry<String, Long>>(orderPrepared.entrySet());
-				Collections.sort(orderPreparedList, new ValueComparator());
-				List<Map.Entry<String, Long>> orderDispatchedList = new ArrayList<Map.Entry<String, Long>>(orderDispatched.entrySet());
-				Collections.sort(orderDispatchedList, new ValueComparator());
-				for(int i=0; i<orderPreparedList.size(); i++) {
-					System.out.print(i);
-					check(orderPreparedList.get(i).getKey().equals(orderDispatchedList.get(i).getKey()), "FIFO not followed in order dispatch");
-				}
-				
-			} */
 
 			// For FIFO, first prder prepared = first order dispatched
-			/* if (Kitchen.dispatchType == DispatchType.FIFO) {
-				List<Map.Entry<String, Long>> courierArrivedList = new ArrayList<Map.Entry<String, Long>>(courierArrived.entrySet());
+			if (Kitchen.dispatchType == DispatchType.FIFO) {
+				List<Map.Entry<String, Long>> courierArrivedList = new ArrayList<Map.Entry<String, Long>>(
+						courierArrived.entrySet());
 				Collections.sort(courierArrivedList, new ValueComparator());
-				List<Map.Entry<String, Long>> orderDispatchedByCourierList = new ArrayList<Map.Entry<String, Long>>(orderDispatchedByCourier.entrySet());
+				List<Map.Entry<String, Long>> orderDispatchedByCourierList = new ArrayList<Map.Entry<String, Long>>(
+						orderDispatchedByCourier.entrySet());
 				Collections.sort(orderDispatchedByCourierList, new ValueComparator());
-				for(int i=0; i<courierArrivedList.size(); i++) {
-					System.out.print(i);
-					check(courierArrivedList.get(i).getKey().equals(orderDispatchedByCourierList.get(i).getKey()), "FIFO not followed in order dispatch");
+				for (int i = 0; i < courierArrivedList.size(); i++) {
+					String courier1 = courierArrivedList.get(i).getKey();
+					String courier2 = orderDispatchedByCourierList.get(i).getKey();
+					if (courierArrived.get(courier1).longValue() != courierArrived.get(courier2).longValue()
+							&& orderDispatchedByCourier.get(courier1).longValue() != orderDispatchedByCourier
+									.get(courier2).longValue()) {
+						check(courier1.equals(courier2), "FIFO not followed in order dispatch");
+					}
 				}
-				
-			} */
+
+			}
 
 			return true;
 		} catch (InvalidSimulationException e) {

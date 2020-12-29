@@ -1,6 +1,7 @@
 package dispatch;
 
 import java.util.*;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * @author iswar patel real-time system that simulates the fulfillment of
@@ -214,7 +215,7 @@ public class Kitchen {
 
 	// List of couriers ready to deliver orders
 	private static Map<String, Courier> couriers = new HashMap<String, Courier>();
-	private static Queue<Courier> courierList = new LinkedList<>();
+	private static PriorityBlockingQueue<Courier> courierList = new PriorityBlockingQueue<>();
 
 	static void addCourier(Courier courier, String id) {
 		synchronized (dispatchLock) {
