@@ -1,8 +1,6 @@
 package dispatch;
 
 import java.util.*;
-
-import dispatch.Kitchen.DispatchType;
 import dispatch.LogEvent.EventType;
 
 public class Validate {
@@ -75,7 +73,7 @@ public class Validate {
 			check(orderReceived.size() == courierArrived.size(), "Order Received != Courier Arrived");
 
 			// For Matched type dispatch, Order ID should be same as courier ID
-			if (Kitchen.dispatchType == DispatchType.Matched) {
+			if (Kitchen.dispatchType == DispatchFactory.DispatchType.Matched) {
 				for (LogEvent e : events) {
 					if (e.event == EventType.OrderDispatched) {
 						check(e.orderNumber.equals(e.courierNumber),
@@ -101,7 +99,7 @@ public class Validate {
 			}
 
 			// For FIFO, first prder prepared = first order dispatched
-			if (Kitchen.dispatchType == DispatchType.FIFO) {
+			if (Kitchen.dispatchType == DispatchFactory.DispatchType.FIFO) {
 				List<Map.Entry<String, Long>> courierArrivedList = new ArrayList<Map.Entry<String, Long>>(
 						courierArrived.entrySet());
 				Collections.sort(courierArrivedList, new ValueComparator());
@@ -119,7 +117,6 @@ public class Validate {
 				}
 
 			}
-
 			return true;
 		} catch (InvalidSimulationException e) {
 			return false;

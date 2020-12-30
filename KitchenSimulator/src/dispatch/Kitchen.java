@@ -3,16 +3,14 @@ package dispatch;
 import java.util.*;
 import java.util.concurrent.PriorityBlockingQueue;
 
+import dispatch.DispatchFactory.DispatchType;
+
 /**
  * @author iswar patel real-time system that simulates the fulfillment of
  *         delivery orders for a kitchen
  *
  */
 public class Kitchen {
-
-	enum DispatchType {
-		Matched, FIFO
-	}
 
 	static DispatchType dispatchType;
 	// List to track simulation events during simulation
@@ -24,7 +22,6 @@ public class Kitchen {
 	}
 
 	static Chef chef;
-	static DispatchManager dispatchManager;
 
 	// an instanceLock object for synchronizing on counters on wait time and orders
 	private static final Object counterLock = new Object();
@@ -247,12 +244,17 @@ public class Kitchen {
 		}
 	}
 
+	static Map<String, Courier> getCouriers() {
+		synchronized (dispatchLock) {
+			return new HashMap<String, Courier>(couriers);
+		}
+	}
+
 	public static List<LogEvent> runSimulation(DispatchType type) throws InterruptedException {
 
 		events = Collections.synchronizedList(new ArrayList<LogEvent>());
 		chef = new Chef();
 		dispatchType = type;
-		dispatchManager = new DispatchManager();
 
 		// Start cooking
 		Thread cook = new Thread(new OrderManager());
@@ -262,11 +264,9 @@ public class Kitchen {
 		Thread customer = new Thread(new Customer());
 		customer.start();
 
-		Thread dispatch = new Thread(new FIFODispatcher());
 		// Start dispatching orders.
-		if (type == DispatchType.FIFO) {
-			dispatch.start();
-		}
+		Thread dispatch = new Thread(DispatchFactory.getDispatcher(type));
+		dispatch.start();
 
 		// wait for all orders to finish
 		while (getDispatchedOrders() == 0 || getDispatchedOrders() != getReceivedOrders()) {
@@ -276,13 +276,11 @@ public class Kitchen {
 		// Finish
 		cook.interrupt();
 		customer.interrupt();
-		if (type == DispatchType.FIFO) {
-			dispatch.interrupt();
-		}
+		dispatch.interrupt();
 
 		Kitchen.logEvent(LogEvent.logAverageCourierWaitTime(getCourierWaitTime() / getDispatchedOrders()));
 		Kitchen.logEvent(LogEvent.logAverageOrderWaitTime(getOrderWaitTime() / getDispatchedOrders()));
-		
+
 		return events;
 	}
 
@@ -296,11 +294,10 @@ public class Kitchen {
 		String type = input.nextLine();
 		input.close();
 
-		if (type.equals("fifo")) {
-			System.out.println("\n Validation: " + Validate.validateSimulation(runSimulation(DispatchType.FIFO)));
-		} else if (type.equals("matched")) {
-			System.out.println("\n Validation: " + Validate.validateSimulation(runSimulation(DispatchType.Matched)));
-		} else {
+		try {
+			System.out.println("\n Validation: "
+					+ Validate.validateSimulation(runSimulation(DispatchFactory.getDispatchType(type))));
+		} catch (Exception e) {
 			System.out.println("Invalid input");
 			System.exit(0);
 		}

@@ -1,6 +1,6 @@
 package dispatch;
 
-public class FIFODispatcher implements Runnable {
+public class FIFODispatcher implements Runnable, Dispatcher {
 
 	/**
 	 * Dispatch Manager matches cooked orders with couriers. Follows FIFO logic a

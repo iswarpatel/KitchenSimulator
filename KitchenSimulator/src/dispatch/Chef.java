@@ -24,7 +24,7 @@ public class Chef {
 			try {
                 Thread.sleep(order.cookTimeS * 1000);
                 order.prepTime = System.currentTimeMillis();
-                Kitchen.dispatchManager.dispatch(order);
+                Kitchen.updateCookedOrder(order);
 
 			} catch(InterruptedException e) {
                 System.out.println("Cooking thread interrupted.");
